@@ -1,3 +1,3 @@
-# Microservice Builder Sample - Speaker microservice
+# Microservice Sample - Speaker microservice
 
-See the [sample documentation](https://github.com/WASdev/sample.microservicebuilder.docs) for more information.
+See the [sample documentation](https://github.com/WASdev/sample.microservices.docs) for more information.
