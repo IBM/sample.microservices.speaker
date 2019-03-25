@@ -25,6 +25,7 @@ import java.util.Set;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
+import javax.inject.Provider;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -39,6 +40,10 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.eclipse.microprofile.faulttolerance.Bulkhead;
+import org.eclipse.microprofile.faulttolerance.CircuitBreaker;
+import org.eclipse.microprofile.faulttolerance.Fallback;
 import org.eclipse.microprofile.metrics.annotation.Counted;
 import org.eclipse.microprofile.metrics.annotation.Metered;
 import org.eclipse.microprofile.metrics.annotation.Metric;
@@ -64,17 +69,33 @@ public class ResourceSpeaker {
     @Context
     private UriInfo uriInfo;
     private @Inject HealthCheckBean healthCheckBean;
+
+    @Inject
+    @ConfigProperty(name = "breaking.service.broken")
+    private Provider<Boolean> isServiceBroken;
     
 
     @GET
     @Timed
     @Metric
-    @Counted(name="io.microprofile.showcase.speaker.rest.monotonic.retrieveAll.absolute(true)",monotonic = true,tags="app=speaker")
+    @Counted(name="io.microprofile.showcase.speaker.rest.monotonic.retrieveAll.absolute",monotonic = true,tags="app=speaker")
     public Collection<Speaker> retrieveAll() {
         final Collection<Speaker> speakers = this.speakerDAO.getSpeakers();
 
         speakers.forEach(this::addHyperMedia);
 
+        return speakers;
+    }
+
+    @GET
+    @Timed
+    @Metric
+    @Path("/getAllSpeakers")
+    @Counted(name="io.microprofile.showcase.speaker.rest.monotonic.retrieveAll.absolute",monotonic = true,tags="app=speaker")
+    @Bulkhead(3)
+    public Collection<Speaker> getAllSpeakers() {
+        final Collection<Speaker> speakers = this.speakerDAO.getAllSpeakers();
+        speakers.forEach(this::addHyperMedia);
         return speakers;
     }
 
@@ -116,15 +137,37 @@ public class ResourceSpeaker {
         return this.addHyperMedia(this.speakerDAO.getSpeaker(id).orElse(new Speaker()));
     }
 
+    @GET
+    @Path("/failingService")
+    @Counted(monotonic = true,tags="app=speaker")
+    @Fallback(fallbackMethod = "fallBackMethod")
+    public Speaker retrieveFailingService(@PathParam("id") final String id) {
+        throw new RuntimeException("Retrieve service failed!");
+    }
+
+    /**
+     * Method to fallback on when you receive run time errors
+     * @return
+     */
+    public String fallBackMethod() {
+        return "API Service failed";
+    }
+
     @PUT
     @Path("/search")
     @Counted(monotonic = true,tags="app=speaker")
-    public Set<Speaker> search(final Speaker speaker) {
+    @Fallback(fallbackMethod="fallbackSearch")
+    @CircuitBreaker(requestVolumeThreshold=2, failureRatio=0.50, delay=5000, successThreshold=2)
+    public Set<Speaker> searchFailure(final Speaker speaker) {
+        if (isServiceBroken.get()) {
+            throw new RuntimeException("Breaking Service failed!");
+        }
         final Set<Speaker> speakers = this.speakerDAO.find(speaker);
-
-        speakers.forEach(this::addHyperMedia);
-
         return speakers;
+    }
+
+    public String fallbackSearch(){
+        return "This is the response from fallbackSearch method.";
     }
 
     
@@ -132,7 +175,7 @@ public class ResourceSpeaker {
     @Path("/updateHealthStatus")
     @Produces(TEXT_PLAIN)
     @Consumes(TEXT_PLAIN)
-    @Counted(name="io.microprofile.showcase.speaker.rest.ResourceSpeaker.updateHealthStatus.monotonic.absolute(true)",monotonic=true,absolute=true,tags="app=vote")
+    @Counted(name="io.microprofile.showcase.speaker.rest.ResourceSpeaker.updateHealthStatus.monotonic.absolute",monotonic=true,absolute=true,tags="app=vote")
     public void updateHealthStatus(@QueryParam("isAppDown") Boolean isAppDown) {
     	healthCheckBean.setIsAppDown(isAppDown);
     }

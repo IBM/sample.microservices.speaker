@@ -2,7 +2,7 @@
 
   <!-- Enable features -->
   <featureManager>
-    <feature>microProfile-1.2</feature>
+    <feature>microProfile-2.1</feature>    
   </featureManager>
 
   <httpEndpoint id="defaultHttpEndpoint"
@@ -10,10 +10,13 @@
         httpPort="9080"
         httpsPort="9443" />
 
-  <quickStartSecurity userName="${env.USERNAME}" userPassword="${env.PASSWORD}"/>
-  
+  <keyStore id="defaultKeyStore" password="mpKeystore"/>
+  <mpMetrics authentication="false"/>
+
   <logging maxFileSize="200" maxFiles="10" traceSpecification="com.ibm.ws.microprofile.*=all:org.eclipse.microprofile.*=all:HEALTH=all" />
 
   <webApplication location="speaker.war" contextRoot="/"/>
+
+  <variable name="breaking.service.broken" value="true"/>
 
 </server>
