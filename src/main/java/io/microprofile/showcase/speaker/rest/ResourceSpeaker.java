@@ -21,6 +21,7 @@ import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import java.net.URI;
 import java.util.Calendar;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Set;
 
 import javax.enterprise.context.ApplicationScoped;
@@ -91,7 +92,7 @@ public class ResourceSpeaker {
     @Timed
     @Metric
     @Path("/getAllSpeakers")
-    @Counted(name="io.microprofile.showcase.speaker.rest.monotonic.retrieveAll.absolute",monotonic = true,tags="app=speaker")
+    @Counted(name="io.microprofile.showcase.speaker.rest.monotonic.getAllSpeakers.absolute",monotonic = true,tags="app=speaker")
     @Bulkhead(3)
     public Collection<Speaker> getAllSpeakers() {
         final Collection<Speaker> speakers = this.speakerDAO.getAllSpeakers();
@@ -140,8 +141,8 @@ public class ResourceSpeaker {
     @GET
     @Path("/failingService")
     @Counted(monotonic = true,tags="app=speaker")
-    @Fallback(fallbackMethod = "fallBackMethod")
-    public Speaker retrieveFailingService(@PathParam("id") final String id) {
+    @Fallback(fallbackMethod = "fallBackMethodForFailingService")
+    public Speaker retrieveFailingService() {
         throw new RuntimeException("Retrieve service failed!");
     }
 
@@ -149,8 +150,8 @@ public class ResourceSpeaker {
      * Method to fallback on when you receive run time errors
      * @return
      */
-    public String fallBackMethod() {
-        return "API Service failed";
+    private Speaker fallBackMethodForFailingService() {
+        return new Speaker();
     }
 
     @PUT
@@ -166,8 +167,8 @@ public class ResourceSpeaker {
         return speakers;
     }
 
-    public String fallbackSearch(){
-        return "This is the response from fallbackSearch method.";
+    public Set<Speaker> fallbackSearch(final Speaker speaker){
+        return new HashSet<>();
     }
 
     
