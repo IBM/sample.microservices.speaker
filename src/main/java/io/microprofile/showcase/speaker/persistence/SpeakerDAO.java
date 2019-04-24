@@ -146,16 +146,6 @@ public class SpeakerDAO {
         return values;
     }
 
-
-    public Collection<Speaker> getAllSpeakers() {
-        try {
-            Thread.sleep(3000);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-        return Collections.EMPTY_LIST;
-    }
-
     /**
      * Persist the given speaker
      *

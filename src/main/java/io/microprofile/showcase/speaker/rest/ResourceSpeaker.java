@@ -71,42 +71,30 @@ public class ResourceSpeaker {
     private UriInfo uriInfo;
     private @Inject HealthCheckBean healthCheckBean;
 
+    /*
+    * if this flag is set to true in server.xml, then
+    * it invokes methods that throws exceptions.
+    */
     @Inject
     @ConfigProperty(name = "breaking.service.broken")
     private Provider<Boolean> isServiceBroken;
-    
 
     @GET
     @Timed
     @Metric
     @Counted(name="io.microprofile.showcase.speaker.rest.monotonic.retrieveAll.absolute",monotonic = true,tags="app=speaker")
+    @Bulkhead(value = 3)
     public Collection<Speaker> retrieveAll() {
         final Collection<Speaker> speakers = this.speakerDAO.getSpeakers();
-
-        speakers.forEach(this::addHyperMedia);
-
-        return speakers;
-    }
-
-    @GET
-    @Timed
-    @Metric
-    @Path("/getAllSpeakers")
-    @Counted(name="io.microprofile.showcase.speaker.rest.monotonic.getAllSpeakers.absolute",monotonic = true,tags="app=speaker")
-    @Bulkhead(3)
-    public Collection<Speaker> getAllSpeakers() {
-        final Collection<Speaker> speakers = this.speakerDAO.getAllSpeakers();
         speakers.forEach(this::addHyperMedia);
         return speakers;
     }
-
     // For use as a k8s readinessProbe for this service
     @GET
     @Path("/nessProbe")
     @Produces(MediaType.TEXT_PLAIN)
     @Counted(monotonic = true,tags="app=speaker")
     public Response nessProbe() throws Exception {
-
         return Response.ok("speaker ready at " + Calendar.getInstance().getTime()).build();
     }
 
@@ -152,6 +140,13 @@ public class ResourceSpeaker {
      */
     private Speaker fallBackMethodForFailingService() {
         return new Speaker();
+    }
+
+    @GET
+    @Path("/failingServiceWithoutAnnotation")
+    @Counted(monotonic = true,tags="app=speaker")
+    public Speaker retrieveFailingServiceWithoutAnnotation() {
+        throw new RuntimeException("Service Failed!");
     }
 
     @PUT
